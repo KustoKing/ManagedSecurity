@@ -1,0 +1,29 @@
+{
+    "TenantId": "53ff34c6-2184-43e1-9b57-ec32e21e222f",
+    "Connections": [
+        {
+            "SubscriptionId": "e174f759-39db-49b8-b8bc-15cf9abca0f3",
+            "ResourceGroup": "ACompanyLikeYours",
+            "LogAnalyticsWorkspace": "ACompanyLikeYours",
+            "SKU": "PerGB2018",
+            "Retention": 90,
+            "Location": "westeurope",
+            "Solutions": [
+                {
+                    "contentId": "azuresentinel.azure-sentinel-solution-azureactivedirectory",
+                    "contentProductId": "azuresentinel.azure-sentinel-solution-azureactived-sl-daggi4frklpyw",
+                    "contentKind": "Solution",
+                    "displayName": "Microsoft Entra ID",
+                    "version": "3.0.9"
+                },
+                {
+                    "contentId": "azuresentinel.azure-sentinel-solution-office365",
+                    "contentProductId": "azuresentinel.azure-sentinel-solution-office365-sl-m6hoiv45videc",
+                    "contentKind": "Solution",
+                    "displayName": "Microsoft 365",
+                    "version": "3.0.0"
+                }
+            ]
+        }
+    ]
+}

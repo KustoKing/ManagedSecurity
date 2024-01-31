@@ -1,0 +1,91 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "workspace": {
+            "type": "String"
+        }
+    },
+    "resources": [
+        {
+            "id": "[concat(resourceId('Microsoft.OperationalInsights/workspaces/providers', parameters('workspace'), 'Microsoft.SecurityInsights'),'/alertRules/2402575b-988e-43dd-9be5-9d3eddc70884')]",
+            "name": "[concat(parameters('workspace'),'/Microsoft.SecurityInsights/2402575b-988e-43dd-9be5-9d3eddc70884')]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "kind": "Scheduled",
+            "apiVersion": "2022-11-01-preview",
+            "properties": {
+                "displayName": "A User registred a new MFA Device",
+                "description": "A new MFA device has been registered while the user was at risk",
+                "severity": "High",
+                "enabled": true,
+                "query": "// Collect Users at Risk\r\nlet RiskyUsers = materialize(\r\n    AADUserRiskEvents\r\n    | where RiskState == \"atRisk\"\r\n    | summarize arg_min(TimeGenerated,*) by UserPrincipalName\r\n    | project-rename \r\n        RiskTime = TimeGenerated\r\n    | extend lowerUserPrincipalName = tolower(UserPrincipalName)\r\n);\r\n// Collect security info registrations\r\nAuditLogs\r\n| where ingestion_time() >= ago(5m)\r\n| where Category      == \"UserManagement\" \r\n    and OperationName == \"User registered security info\"\r\n    and Result        == \"success\"\r\n| extend InitiatedBy = parse_json(tostring(InitiatedBy.user))\r\n| extend \r\n    IPAddress         = tostring(InitiatedBy.ipAddress),\r\n    UserPrincipalName = tostring(InitiatedBy.userPrincipalName),\r\n    AADUserId         = tostring(InitiatedBy.id),\r\n    RegisterTime      = TimeGenerated\r\n| extend lowerUserPrincipalName = tolower(UserPrincipalName)\r\n// join risk and security\r\n| join kind=inner RiskyUsers on lowerUserPrincipalName\r\n| project-away *1\r\n| extend \r\n    DeltaRR = datetime_diff('minute', RegisterTime, RiskTime)\r\n// filter where the delta from risk and register is beteen 0 and 240 minutes\r\n| where DeltaRR between (0 .. 240)\r\n| project-reorder RiskTime, RegisterTime, DeltaRR, UserPrincipalName, IPAddress, Location, RiskDetail, RiskEventType, RiskState\r\n",
+                "queryFrequency": "PT5M",
+                "queryPeriod": "PT4H",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT5H",
+                "suppressionEnabled": false,
+                "startTimeUtc": null,
+                "tactics": [
+                    "Persistence"
+                ],
+                "techniques": [
+                    "T1098"
+                ],
+                "alertRuleTemplateName": null,
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": true,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT4H",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+                "alertDetailsOverride": {
+                    "alertDynamicProperties": []
+                },
+                "customDetails": {
+                    "RiskTime": "RiskTime",
+                    "RegisterTime": "RegisterTime"
+                },
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "AadTenantId",
+                                "columnName": "AADTenantId"
+                            },
+                            {
+                                "identifier": "AadUserId",
+                                "columnName": "AADUserId"
+                            },
+                            {
+                                "identifier": "DisplayName",
+                                "columnName": "UserDisplayName"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "IP",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Address",
+                                "columnName": "IPAddress"
+                            }
+                        ]
+                    }
+                ],
+                "sentinelEntitiesMappings": null,
+                "templateVersion": null
+            }
+        }
+    ]
+}
